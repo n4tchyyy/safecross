@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Light via Bluetooth and Smartcross</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(to right, #ff7e5f, #feb47b);
+        }
+        .home-container {
+            text-align: center;
+            color: white;
+            padding: 50px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 500px;
+        }
+        h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            font-family: 'Arial', sans-serif;
+            font-weight: bold;
+        }
+        p {
+            font-size: 18px;
+            margin-bottom: 40px;
+        }
+        .start-button {
+            width: 200px;
+            height: 60px;
+            background-color: #2e2d2c;
+            color: white;
+            font-size: 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease;
+        }
+        .start-button:hover {
+            background-color: #2980b9;
+        }
+
+        .main-container {
+            display: none;
+            text-align: center;
+            background-color: #ffffff;
+            padding: 40px 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 480px;
+        }
+
+        /* Add styles for main content */
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+        }
+        .circle-button {
+            width: 200px;
+            height: 200px;
+            background-color: #e74c3c;
+            color: white;
+            font-size: 18px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        .circle-button:hover {
+            background-color: #c0392b;
+        }
+        .bluetooth-button {
+            width: 180px;
+            height: 50px;
+            background-color: #3498db;
+            color: white;
+            font-size: 16px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+        }
+        .bluetooth-button:hover {
+            background-color: #2980b9;
+        }
+        .message {
+            margin-top: 20px;
+            color: #333;
+            font-size: 16px;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 22px;
+            }
+            .start-button {
+                width: 160px;
+                height: 50px;
+                font-size: 16px;
+            }
+            .circle-button {
+                width: 180px;
+                height: 180px;
+                font-size: 16px;
+            }
+            .bluetooth-button {
+                width: 160px;
+                height: 50px;
+                font-size: 14px;
+            }
+            .message {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Home Page -->
+    <div class="home-container" id="homeContainer">
+        <h1>Welcome to the SafeCross</h1>
+        <p>Control traffic lights and cross the road safely with Bluetooth!</p>
+        <button class="start-button" onclick="startApp()">Get Started</button>
+    </div>
+
+    <!-- Main Application -->
+    <div class="main-container" id="mainContainer">
+        <h1>Control Light via Bluetooth & Smartcross</h1>
+        <div class="button-container">
+            <button class="circle-button" id="actionButton" onclick="startProcess()">Want to Cross the Road</button>
+            <button class="bluetooth-button" id="connectBtn" onclick="connectBluetooth()">Connect Bluetooth</button>
+        </div>
+        <div class="message" id="message">Click the button if you want to cross the road</div>
+    </div>
+
+    <script>
+        // Show the home page
+        function startApp() {
+            document.getElementById("homeContainer").style.display = "none";
+            document.getElementById("mainContainer").style.display = "block";
+        }
+
+        let bleDevice;
+        let bleCharacteristic;
+
+        const SERVICE_UUID = "19b10000-e8f2-537e-4f6c-d104768a1214"; //UUID
+        const CHARACTERISTIC_UUID = "19b10001-e8f2-537e-4f6c-d104768a1214"; // UUID
+
+        const connectBtn = document.getElementById("connectBtn");
+        const actionButton = document.getElementById("actionButton");
+
+        // Bluetooth connection logic
+        async function connectBluetooth() {
+            try {
+                bleDevice = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: [SERVICE_UUID]
+                });
+                const server = await bleDevice.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                bleCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+
+                alert("Connected to Arduino!");
+                connectBtn.disabled = true; // Disable Bluetooth connect button after successful connection
+            } catch (error) {
+                console.error(error);
+                alert("Failed to connect. Make sure your Arduino is in pairing mode.");
+            }
+        }
+
+        function startProcess() {
+            if (!bleCharacteristic) {
+                alert("Please connect to Bluetooth first.");
+                return;
+            }
+
+            actionButton.disabled = true;
+            document.getElementById("message").textContent = "Please wait...";
+            document.getElementById("mainContainer").innerHTML = ` 
+                <h1>Waiting...</h1>
+                <div class="waiting">Please wait for 20 seconds</div>
+            `;
+            
+            // Wait for 20 seconds before countdown starts
+            setTimeout(() => {
+                startCountdown();
+            }, 20000); // 20 seconds delay
+        }
+
+        function startCountdown() {
+            document.getElementById("mainContainer").innerHTML = ` 
+                <h1>Crossing the Road</h1>
+                <div class="countdown" id="countdown">60</div>
+            `;
+            
+            let countdownValue = 60;
+            const countdownElement = document.getElementById("countdown");
+
+            const countdownInterval = setInterval(() => {
+                countdownValue--;
+                countdownElement.textContent = countdownValue;
+                if (countdownValue <= 0) {
+                    clearInterval(countdownInterval);
+                    resetPage();
+                    toggleLight(); // Toggle the light after countdown finishes
+                }
+            }, 1000);
+        }
+
+        function resetPage() {
+            setTimeout(() => {
+                document.getElementById("mainContainer").innerHTML = ` 
+                    <h1>Control the Traffic Light</h1>
+                    <div class="button-container">
+                        <button class="circle-button" onclick="startProcess()">Want to Cross the Road</button>
+                        <button class="bluetooth-button" onclick="connectBluetooth()">Connect Bluetooth</button>
+                    </div>
+                    <div class="message">Click the button if you want to cross the road</div>
+                `;
+            }, 1000); // Reset after 1 second
+        }
+
+        function toggleLight() {
+            if (bleCharacteristic) {
+                const command = new Uint8Array([1]); // Send "1" to toggle light
+                bleCharacteristic.writeValue(command).then(() => {
+                    alert("Signal sent to toggle the light!");
+                }).catch(err => {
+                    console.error("Error sending signal", err);
+                });
+            } else {
+                console.error("Bluetooth not connected.");
+            }
+        }
+    </script>
+</body>
+</html>
